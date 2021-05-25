@@ -2,7 +2,15 @@
 # ARGV[1] - port
 # ARGV[2] - input1 path prefix
 # ARGV[3] - input2 path prefix
+# ARGV[4] - entry script file
 require 'fileutils'
+
+FileUtils.rm Dir.glob('output*')
+FileUtils.rm Dir.glob('Output*')
+
+script = ARGV[4]
+server_id = Process.spawn("node #{script}")
+sleep 1
 
 def get_output1(input1, input2)
   output1 = []
@@ -30,16 +38,9 @@ def get_output2(input1, input2)
   output2
 end
 
-def read_output(file)
-  file_name = File.file?(file) ? file : (file + '.txt')
-  return File.read(file_name).split("\n").map { |x| x.strip }
-end
-
-
-FileUtils.rm Dir.glob('output*')
-FileUtils.rm Dir.glob('Output*')
 
 text=File.open(ARGV[0]).read
+
 
 line_num=0
 input1 = []
@@ -99,7 +100,10 @@ end
 
 def read_output(file)
   file_name = get_file_name file
-  return File.read(file_name).split("\n").map { |x| x.strip }
+  puts file_name
+  content = File.read(file_name)
+  delimiter = content.split(',').length > 1 ? ',' : "\n"
+  return content.split(delimiter).map { |x| x.strip }
 end
 
 
@@ -114,3 +118,6 @@ puts "expected: #{output1} "
 puts "output2:"
 puts "actual:   #{actual_output2}"
 puts "expected: #{output2}"
+
+puts server_id
+Process.kill('HUP', server_id)

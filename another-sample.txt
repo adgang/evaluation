@@ -1,0 +1,7 @@
+1 apple
+2 ant 
+2 bear 
+2 cat 
+2 deer 
+1 beans 
+----
