@@ -1,0 +1,23 @@
+1 apple
+1 beans 
+2 ant 
+2 bear 
+1 corn 
+1 donut 
+2 cat 
+2 deer 
+----
+apple
+bear
+corn
+deer
+----
+ant 
+apple
+bear
+beans
+cat
+corn
+deer
+donut
+----
