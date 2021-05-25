@@ -39,86 +39,90 @@ def get_output2(input1, input2)
   output2
 end
 
-
-text=File.open(ARGV[4]).read
-
-
-line_num=0
-input1 = []
-input2 = []
-
-# support windows EOL
-text.gsub!(/\r\n?/, "\n")
-
-port = ARGV[0]
-hostname = 'http://localhost:' + port
-
-input1_url = hostname + ARGV[1] + '/'
-input2_url = hostname + ARGV[2] + '/'
+begin
+  text=File.open(ARGV[4]).read
 
 
-state = :input 
+  line_num=0
+  input1 = []
+  input2 = []
 
-text.each_line do |raw_line|
-  puts "#{line_num += 1} #{raw_line}"
+  # support windows EOL
+  text.gsub!(/\r\n?/, "\n")
 
-  line = raw_line.strip
-  break if line == '----'
-  parts = line.split(' ')
-  if (parts[0].to_i == 1)
-    input1 << parts[1]
-    cmd = "curl #{input1_url}#{parts[1]}"
-    puts "Running #{cmd}"
-    system(cmd)
-  elsif (parts[0].to_i == 2)
-    input2 << parts[1]
-    cmd = "curl #{input2_url}#{parts[1]}"
-    puts "Running #{cmd}"
-    system(cmd)
-  else
-    throw "Error reading #{line_num}"
+  port = ARGV[0]
+  hostname = 'http://localhost:' + port
+
+  input1_url = hostname + ARGV[1] + '/'
+  input2_url = hostname + ARGV[2] + '/'
+
+
+  state = :input 
+
+  text.each_line do |raw_line|
+    puts "#{line_num += 1} #{raw_line}"
+
+    line = raw_line.strip
+    break if line == '----'
+    parts = line.split(' ')
+    if (parts[0].to_i == 1)
+      input1 << parts[1]
+      cmd = "curl #{input1_url}#{parts[1]}"
+      puts "Running #{cmd}"
+      system(cmd)
+    elsif (parts[0].to_i == 2)
+      input2 << parts[1]
+      cmd = "curl #{input2_url}#{parts[1]}"
+      puts "Running #{cmd}"
+      system(cmd)
+    else
+      throw "Error reading #{line_num}"
+    end
   end
-end
 
-output1 = get_output1(input1, input2)
-output2 = get_output2(input1, input2)
+  output1 = get_output1(input1, input2)
+  output2 = get_output2(input1, input2)
 
-def uncapitalize(name)
-  name[0, 1].downcase + name[1..-1]
-end
-
-def get_file_name(name)
-  candidates = [
-    uncapitalize(name),
-    uncapitalize(name) + '.txt',
-    name.capitalize,
-    name.capitalize + '.txt'
-  ]
-  candidates.each do |file|
-    return file if File.file?(file)
+  def uncapitalize(name)
+    name[0, 1].downcase + name[1..-1]
   end
+
+  def get_file_name(name)
+    candidates = [
+      uncapitalize(name),
+      uncapitalize(name) + '.txt',
+      name.capitalize,
+      name.capitalize + '.txt'
+    ]
+    candidates.each do |file|
+      return file if File.file?(file)
+    end
+  end
+
+  def read_output(file)
+    file_name = get_file_name file
+    puts file_name
+    content = File.read(file_name)
+    delimiter = content.split(',').length > 1 ? ',' : "\n"
+    return content.split(delimiter).map { |x| x.strip }
+  end
+
+
+  actual_output1 = read_output('output1')
+
+  actual_output2 = read_output('output2')
+
+  puts "output1:"
+  puts "actual:   #{actual_output1}"
+  puts "expected: #{output1} "
+
+  puts "output2:"
+  puts "actual:   #{actual_output2}"
+  puts "expected: #{output2}"
+
+rescue Exception => err
+  puts err
+  puts "killing server process:#{server_id}"
+
+  Process.kill('HUP', server_id)
 end
-
-def read_output(file)
-  file_name = get_file_name file
-  puts file_name
-  content = File.read(file_name)
-  delimiter = content.split(',').length > 1 ? ',' : "\n"
-  return content.split(delimiter).map { |x| x.strip }
-end
-
-
-actual_output1 = read_output('output1')
-
-actual_output2 = read_output('output2')
-
-puts "output1:"
-puts "actual:   #{actual_output1}"
-puts "expected: #{output1} "
-
-puts "output2:"
-puts "actual:   #{actual_output2}"
-puts "expected: #{output2}"
-
-puts server_id
-Process.kill('HUP', server_id)
