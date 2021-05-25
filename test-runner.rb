@@ -1,14 +1,15 @@
-# ARGV[0] - input file
-# ARGV[1] - port
-# ARGV[2] - input1 path prefix
-# ARGV[3] - input2 path prefix
-# ARGV[4] - entry script file
+# ARGV[0] - port
+# ARGV[1] - input1 path prefix
+# ARGV[2] - input2 path prefix
+# ARGV[3] - entry script file
+# ARGV[4] - input sample file
+
 require 'fileutils'
 
 FileUtils.rm Dir.glob('output*')
 FileUtils.rm Dir.glob('Output*')
 
-script = ARGV[4]
+script = ARGV[3]
 server_id = Process.spawn("node #{script}")
 sleep 1
 
@@ -39,7 +40,7 @@ def get_output2(input1, input2)
 end
 
 
-text=File.open(ARGV[0]).read
+text=File.open(ARGV[4]).read
 
 
 line_num=0
@@ -49,11 +50,11 @@ input2 = []
 # support windows EOL
 text.gsub!(/\r\n?/, "\n")
 
-port = ARGV[1]
+port = ARGV[0]
 hostname = 'http://localhost:' + port
 
-input1_url = hostname + ARGV[2] + '/'
-input2_url = hostname + ARGV[3] + '/'
+input1_url = hostname + ARGV[1] + '/'
+input2_url = hostname + ARGV[2] + '/'
 
 
 state = :input 
