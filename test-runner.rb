@@ -1,16 +1,64 @@
-# ARGV[0] - port
-# ARGV[1] - input1 path prefix
-# ARGV[2] - input2 path prefix
-# ARGV[3] - entry script file
-# ARGV[4] - input sample file
+# ARGV[0] - input sample file
+
+# To run the tests:
+# 1. have the candidate's code submission files at
+# <root>/<candidate-name>/<code-folder>
+# 2. have the evaluation folder at
+# <root>/evaluation
+# 3. cd into candidate's code folder
+# 4. Create a runner-config.json file in the folder with the details of port, output file names, 
+#  input urls and command to run. See default_runner_config below for sample config.
+# 5. Run the following command:
+# ruby ../../evaluation/test-runner.rb ../../evaluation/sample.txt
+# It starts the server of the candidate's code, runs test case and kills the server.
+
+
 
 require 'fileutils'
+require 'json'
 
-FileUtils.rm Dir.glob('output*')
-FileUtils.rm Dir.glob('Output*')
+default_runner_config = {
+  port: 3000,
+  output1: 'output1.txt',
+  output2: 'output2.txt',
+  input1_url: '/input1',
+  input2_url: '/input2',
+  command: 'npm start',
+}
 
-script = ARGV[3]
-server_id = Process.spawn("node #{script}")
+# ```
+# Sample:
+# {
+#   "port": 3000,
+#   "output1": "output1.txt",
+#   "output2": "output2.txt",
+#   "input1_url": "/input1",
+#   "input2_url": "/input2",
+#   "command": "npm start"
+# }
+# ```
+
+
+begin
+  config = JSON.parse(File.read 'runner-config.json')
+  config = Hash[config.map{ |k, v| [k.to_sym, v] }]
+  config = default_runner_config.merge config
+rescue Exception => err
+  puts err
+  raise err
+end
+
+sample_file = ARGV[0]
+port = config[:port].to_s
+
+config[:delete_output_files] = config[:delete_output_files].nil?  ? true : config[:delete_output_files]
+
+if config[:delete_output_files]
+  File.delete config[:output1] if File.exist? config[:output1]
+  File.delete config[:output2] if File.exist? config[:output2]
+end
+
+server_id = Process.spawn(config[:command])
 sleep 1
 
 def get_output1(input1, input2)
@@ -21,7 +69,7 @@ def get_output1(input1, input2)
     index += 1
     break unless index < input2.length
     output1 << input2[index]
-    index += 1    
+    index += 1
   end
   output1
 end
@@ -32,7 +80,7 @@ def get_output2(input1, input2)
   while index < input2.length do
     output2 << input2[index]
     break unless index < input1.length
-    
+
     output2 << input1[index]
     index += 1
   end
@@ -40,24 +88,21 @@ def get_output2(input1, input2)
 end
 
 begin
-  text=File.open(ARGV[4]).read
+  text=File.open(sample_file).read
 
-
-  line_num=0
+  line_num = 0
   input1 = []
   input2 = []
 
   # support windows EOL
   text.gsub!(/\r\n?/, "\n")
 
-  port = ARGV[0]
   hostname = 'http://localhost:' + port
 
-  input1_url = hostname + ARGV[1] + '/'
-  input2_url = hostname + ARGV[2] + '/'
+  input1_url = hostname + config[:input1_url] + '/'
+  input2_url = hostname + config[:input2_url] + '/'
 
-
-  state = :input 
+  state = :input
 
   text.each_line do |raw_line|
     puts "#{line_num += 1} #{raw_line}"
@@ -92,25 +137,24 @@ begin
       uncapitalize(name),
       uncapitalize(name) + '.txt',
       name.capitalize,
-      name.capitalize + '.txt'
+      name.capitalize + '.txt',
     ]
     candidates.each do |file|
       return file if File.file?(file)
     end
   end
 
-  def read_output(file)
-    file_name = get_file_name file
-    puts file_name
+  def read_output(file_name)
+    puts "Reading #{file_name}"
     content = File.read(file_name)
     delimiter = content.split(',').length > 1 ? ',' : "\n"
     return content.split(delimiter).map { |x| x.strip }
   end
 
 
-  actual_output1 = read_output('output1')
+  actual_output1 = read_output(config[:output1] || (get_file_name 'output1'))
 
-  actual_output2 = read_output('output2')
+  actual_output2 = read_output(config[:output2] || (get_file_name 'output2'))
 
   puts "output1:"
   puts "actual:   #{actual_output1}"
@@ -122,7 +166,7 @@ begin
 
 rescue Exception => err
   puts err
+ensure
   puts "killing server process:#{server_id}"
-
   Process.kill('HUP', server_id)
 end
